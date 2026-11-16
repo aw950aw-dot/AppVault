@@ -55,9 +55,9 @@ class MainActivity : Activity() {
         val savedHost = prefs.getString(KEY_HOST, null)
         val savedPort = prefs.getInt(KEY_CONNECT_PORT, -1)
         statusText.text = if (savedHost != null && savedPort in 1..65535) {
-            "ADB paired previously. Tap Connect to reconnect."
+            "המכשיר שויך בעבר. לחץ על התחברות כדי להתחבר מחדש."
         } else {
-            "ADB is not connected. Pair once using Wireless Debugging."
+            "אין חיבור למכשיר. בצע שיוך חד־פעמי דרך ניפוי באגים אלחוטי."
         }
     }
 
@@ -76,6 +76,7 @@ class MainActivity : Activity() {
 
     private fun buildScreen() {
         root = LinearLayout(this).apply {
+            layoutDirection = View.LAYOUT_DIRECTION_RTL
             orientation = LinearLayout.VERTICAL
             setPadding(dp(18), dp(22), dp(18), dp(18))
             setBackgroundColor(Color.rgb(11, 18, 32))
@@ -84,17 +85,17 @@ class MainActivity : Activity() {
         val content = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         scroll.addView(content)
 
-        content.addView(text("APP VAULT", 12, Color.rgb(96, 165, 250), true))
-        content.addView(text("App backup & data preservation", 26, Color.WHITE, true).apply {
+        content.addView(text("כספת אפליקציות", 12, Color.rgb(96, 165, 250), true))
+        content.addView(text("גיבוי אפליקציות ושמירת נתונים", 26, Color.WHITE, true).apply {
             setPadding(0, dp(4), 0, dp(8))
         })
         content.addView(text(
-            "Export the install package, then use Android's keep-data uninstall option. " +
-                "Private app data stays on this phone; it is not inside the backup archive.",
+            "ייצא את קובצי ההתקנה, ואז הסר את האפליקציה תוך שמירת הנתונים במכשיר. " +
+                "הנתונים הפרטיים נשארים בטלפון ואינם נכללים בקובץ הגיבוי.",
             14, Color.rgb(203, 213, 225), false
         ).apply { setPadding(0, 0, 0, dp(16)) })
 
-        statusText = text("ADB not connected", 14, Color.rgb(147, 197, 253), true).apply {
+        statusText = text("אין חיבור למכשיר", 14, Color.rgb(147, 197, 253), true).apply {
             setPadding(dp(12), dp(12), dp(12), dp(12))
             background = rounded(Color.rgb(22, 38, 64), dp(12))
         }
@@ -104,17 +105,20 @@ class MainActivity : Activity() {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
         }
-        adbButtons.addView(actionButton("Pair ADB") { showPairDialog() }, weightedParams())
-        adbButtons.addView(actionButton("Connect") { showConnectDialog() }, weightedParams())
+        adbButtons.addView(actionButton("שיוך מכשיר") { showPairDialog() }, weightedParams())
+        adbButtons.addView(actionButton("התחברות") { showConnectDialog() }, weightedParams())
         content.addView(adbButtons)
+        content.addView(actionButton("פתח הגדרות ניפוי באגים אלחוטי") {
+            openWirelessDebuggingSettings()
+        }, matchWrap())
 
-        content.addView(text("How the connection works", 17, Color.WHITE, true).apply {
+        content.addView(text("איך החיבור עובד", 17, Color.WHITE, true).apply {
             setPadding(0, dp(16), 0, dp(5))
         })
         content.addView(text(
-            "No Root and no Shizuku. The ADB client is built into this APK. " +
-                "One-time setup: enable Developer options and Wireless debugging, pair with the six-digit code, " +
-                "then enter the current connection port. Android 11 or newer is required.",
+            "אין צורך ב־Root או ב־Shizuku. לקוח ADB מובנה באפליקציה. " +
+                "יש להפעיל אפשרויות למפתחים וניפוי באגים אלחוטי, לפתוח במסך ההגדרות את ״שיוך באמצעות קוד״ ולהזין את הקוד בן שש הספרות. " +
+                "האפליקציה תאתר אוטומטית את פורט השיוך והחיבור. נדרש Android 11 ומעלה.",
             13, Color.rgb(148, 163, 184), false
         ))
 
@@ -123,21 +127,21 @@ class MainActivity : Activity() {
             gravity = Gravity.CENTER_VERTICAL
             setPadding(0, dp(22), 0, dp(8))
         }
-        appHeading.addView(text("Installed apps", 20, Color.WHITE, true),
+        appHeading.addView(text("אפליקציות מותקנות", 20, Color.WHITE, true),
             LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        appHeading.addView(actionButton("Refresh") { renderApps() })
+        appHeading.addView(actionButton("רענון") { renderApps() })
         content.addView(appHeading)
 
         appList = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         content.addView(appList)
 
-        content.addView(actionButton("Restore a .avbackup file") { chooseBackupToRestore() }.apply {
+        content.addView(actionButton("שחזור מקובץ ‎.avbackup") { chooseBackupToRestore() }.apply {
             setPadding(dp(12), dp(12), dp(12), dp(12))
         }, matchWrap())
         content.addView(text(
-            "Important: the .avbackup file contains the APK and split APKs, not private data. " +
-                "To retain private data after removal, use App Vault's Preserve data & uninstall action " +
-                "on this same device. Do not use Android Settings to uninstall the app normally.",
+            "חשוב: קובץ ‎.avbackup מכיל את קובצי ההתקנה בלבד ולא את המידע הפרטי של האפליקציה. " +
+                "כדי לשמור את המידע לאחר ההסרה, יש להשתמש בפעולת ״שמירת נתונים והסרה״ מתוך כספת אפליקציות באותו מכשיר. " +
+                "אין להסיר את האפליקציה דרך הגדרות Android.",
             12, Color.rgb(251, 191, 36), false
         ).apply { setPadding(0, dp(14), 0, dp(12)) })
 
@@ -151,11 +155,11 @@ class MainActivity : Activity() {
         if (!::appList.isInitialized) return
         appList.removeAllViews()
         val apps = runCatching { InstalledApps.load(this) }.getOrElse {
-            appList.addView(text("Could not enumerate apps: ${it.message}", 13, Color.RED, false))
+            appList.addView(text("לא ניתן לטעון את רשימת האפליקציות: ${it.message}", 13, Color.RED, false))
             return
         }
         if (apps.isEmpty()) {
-            appList.addView(text("No user-installed apps found.", 14, Color.LTGRAY, false))
+            appList.addView(text("לא נמצאו אפליקציות שהותקנו על ידי המשתמש.", 14, Color.LTGRAY, false))
             return
         }
         apps.forEach { app -> appList.addView(appCard(app), matchWrap()) }
@@ -182,7 +186,7 @@ class MainActivity : Activity() {
         }
         details.addView(text(app.label, 16, Color.WHITE, true))
         details.addView(text(app.packageName, 11, Color.rgb(148, 163, 184), false))
-        details.addView(text("Version ${app.versionName} · ${app.versionCode}", 11, Color.rgb(148, 163, 184), false))
+        details.addView(text("גרסה ${app.versionName} · ${app.versionCode}", 11, Color.rgb(148, 163, 184), false))
         top.addView(details, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         card.addView(top)
 
@@ -190,8 +194,8 @@ class MainActivity : Activity() {
             orientation = LinearLayout.HORIZONTAL
             setPadding(0, dp(10), 0, 0)
         }
-        actions.addView(actionButton("Export APK bundle") { exportApp(app) }, weightedParams())
-        actions.addView(actionButton("Preserve data & uninstall") { confirmPreservingUninstall(app) }, weightedParams())
+        actions.addView(actionButton("ייצוא קובצי התקנה") { exportApp(app) }, weightedParams())
+        actions.addView(actionButton("שמירת נתונים והסרה") { confirmPreservingUninstall(app) }, weightedParams())
         card.addView(actions)
         return card.apply { setPadding(dp(12), dp(12), dp(12), dp(12)) }
     }
@@ -232,28 +236,28 @@ class MainActivity : Activity() {
                             BackupBundleManager.copyBundleToUri(this@MainActivity, bundle, uri)
                         }
                         bundle.delete()
-                        Toast.makeText(this@MainActivity, "Backup bundle exported", Toast.LENGTH_LONG).show()
+                        Toast.makeText(this@MainActivity, "קובץ הגיבוי נשמר בהצלחה", Toast.LENGTH_LONG).show()
                         val app = InstalledApps.load(this@MainActivity).firstOrNull { it.packageName == packageName }
                         if (app != null) confirmPreservingUninstall(app, exportJustCompleted = true)
                     } catch (error: Throwable) {
-                        showError("Export failed", error.message ?: "Unknown error")
+                        showError("ייצוא נכשל", error.message ?: "שגיאה לא ידועה")
                     }
                 }
             }
             REQUEST_RESTORE -> {
                 scope.launch {
                     try {
-                        statusText.text = "Validating backup archive…"
+                        statusText.text = "בודק את קובץ הגיבוי…"
                         val bundle = withContext(Dispatchers.IO) {
                             contentResolver.openInputStream(uri)?.use {
                                 BackupBundleManager.extractAndValidate(this@MainActivity, it)
-                            } ?: error("Could not open the selected archive")
+                            } ?: error("לא ניתן לפתוח את קובץ הגיבוי שנבחר")
                         }
                         pendingRestore = bundle
                         installPendingBundle()
                     } catch (error: Throwable) {
-                        showError("Restore failed", error.message ?: "Invalid backup archive")
-                        statusText.text = "Restore validation failed"
+                        showError("השחזור נכשל", error.message ?: "קובץ הגיבוי אינו תקין")
+                        statusText.text = "בדיקת קובץ הגיבוי נכשלה"
                     }
                 }
             }
@@ -263,10 +267,10 @@ class MainActivity : Activity() {
     private fun confirmPreservingUninstall(app: InstalledApp, exportJustCompleted: Boolean = false) {
         if (!exportJustCompleted) {
             AlertDialog.Builder(this)
-                .setTitle("Export the APK first")
-                .setMessage("App Vault must save the APK bundle before it removes the app. The private data will remain on this phone and will not be inside the exported file.")
-                .setNegativeButton("Cancel", null)
-                .setPositiveButton("Export APK bundle") { _, _ -> exportApp(app) }
+                .setTitle("יש לייצא תחילה את קובצי ההתקנה")
+                .setMessage("כספת אפליקציות חייבת לשמור את קובצי ההתקנה לפני הסרת האפליקציה. הנתונים הפרטיים יישארו בטלפון ולא ייכללו בקובץ שיוצא.")
+                .setNegativeButton("ביטול", null)
+                .setPositiveButton("ייצוא קובצי התקנה") { _, _ -> exportApp(app) }
                 .show()
             return
         }
@@ -277,10 +281,10 @@ class MainActivity : Activity() {
             return
         }
         AlertDialog.Builder(this)
-            .setTitle("Preserve app data on this phone?")
-            .setMessage("The APK bundle was saved. App Vault will ask Android to remove this app for the current user while keeping its data/cache directories on this phone. The private data is NOT in the exported file. Reinstall the same package signed with the same signing key to reuse the retained data.")
-            .setNegativeButton("Cancel", null)
-            .setPositiveButton("Preserve & uninstall") { _, _ ->
+            .setTitle("לשמור את נתוני האפליקציה במכשיר?")
+            .setMessage("קובצי ההתקנה נשמרו. כעת תישלח ל־Android בקשה להסיר את האפליקציה מהמשתמש הנוכחי תוך השארת תיקיות הנתונים והמטמון בטלפון. הנתונים הפרטיים אינם בקובץ הגיבוי. כדי להשתמש בהם שוב, יש להתקין את אותה חבילה עם אותה חתימת מפתח.")
+            .setNegativeButton("ביטול", null)
+            .setPositiveButton("שמירה והסרה") { _, _ ->
                 performPreservingUninstall(app.packageName)
             }
             .show()
@@ -291,138 +295,255 @@ class MainActivity : Activity() {
         val port = prefs.getInt(KEY_CONNECT_PORT, -1)
         if (port !in 1..65535) return showConnectDialog()
         scope.launch {
-            statusText.text = "Asking Android to keep data while removing $packageName…"
+            statusText.text = "מבקש מ־Android להסיר את $packageName תוך שמירת הנתונים…"
             try {
                 val result = adbGateway.uninstallKeepingData(host, port, packageName)
                 if (result.exitCode == 0 && result.output.contains("Success", ignoreCase = true)) {
                     Toast.makeText(this@MainActivity,
-                        "App removed; Android was asked to retain its data on this device.", Toast.LENGTH_LONG).show()
-                    statusText.text = "Data-preserving uninstall completed for $packageName"
+                        "האפליקציה הוסרה. נשלחה ל־Android בקשה לשמור את הנתונים במכשיר.", Toast.LENGTH_LONG).show()
+                    statusText.text = "ההסרה תוך שמירת נתונים הושלמה עבור $packageName"
                     adbConnected = true
                     renderApps()
                 } else {
-                    showError("Uninstall failed", result.output.ifBlank { "Exit code ${result.exitCode}" })
-                    statusText.text = "Preserve-data uninstall failed"
+                    showError("ההסרה נכשלה", result.output.ifBlank { "קוד יציאה ${result.exitCode}" })
+                    statusText.text = "ההסרה תוך שמירת נתונים נכשלה"
                 }
             } catch (error: Throwable) {
                 adbConnected = false
-                statusText.text = "ADB connection failed"
-                showError("Could not preserve data", error.message ?: "ADB error")
+                statusText.text = "החיבור למכשיר נכשל"
+                showError("לא ניתן לשמור את נתוני האפליקציה", error.message ?: "שגיאת ADB")
             }
         }
     }
 
     private fun showPairDialog() {
         val form = formLayout()
-        val hostInput = input("Device IP address", prefs.getString(KEY_HOST, "") ?: "")
-        val portInput = input("Pairing port shown in the pairing dialog", "")
-        val codeInput = input("Six-digit pairing code", "", number = true)
+        val discoveryText = text("מאתר אוטומטית את שירות השיוך…", 13, Color.DKGRAY, false)
+        val codeInput = input("קוד שיוך בן 6 ספרות", "", number = true)
+        val hostInput = input("כתובת IP (לגיבוי בלבד)", prefs.getString(KEY_HOST, "") ?: "")
+        val portInput = input("פורט שיוך (לגיבוי בלבד)", "", number = true)
+        hostInput.visibility = View.GONE
+        portInput.visibility = View.GONE
+        val manualButton = actionButton("אין זיהוי אוטומטי? הזנה ידנית") {
+            val show = hostInput.visibility != View.VISIBLE
+            hostInput.visibility = if (show) View.VISIBLE else View.GONE
+            portInput.visibility = if (show) View.VISIBLE else View.GONE
+            (it as? Button)?.text = if (show) "הסתרת הזנה ידנית" else "אין זיהוי אוטומטי? הזנה ידנית"
+        }
+        form.addView(discoveryText)
+        form.addView(codeInput)
+        form.addView(manualButton)
         form.addView(hostInput)
         form.addView(portInput)
-        form.addView(codeInput)
-        form.addView(text(
-            "Keep the Android Wireless Debugging pairing-code dialog open while pairing. Use split-screen if necessary.",
-            12, Color.DKGRAY, false
-        ))
+
+        var discovered: KadbGateway.DiscoveredEndpoint? = null
         val dialog = AlertDialog.Builder(this)
-            .setTitle("Pair built-in ADB")
-            .setMessage("Android 11+ · No Root · No Shizuku")
+            .setTitle("שיוך אלחוטי")
             .setView(form)
-            .setNegativeButton("Cancel", null)
-            .setPositiveButton("Pair", null)
+            .setNegativeButton("ביטול", null)
+            .setPositiveButton("בצע שיוך", null)
             .create()
+
         dialog.setOnShowListener {
+            dialog.window?.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                val host = hostInput.text.toString().trim()
-                val port = portInput.text.toString().toIntOrNull()
                 val code = codeInput.text.toString().trim()
-                if (port == null || host.isBlank() || !code.matches(Regex("[0-9]{6}"))) {
-                    Toast.makeText(this, "Enter the IP, pairing port and six-digit code.", Toast.LENGTH_SHORT).show()
+                if (!code.matches(Regex("[0-9]{6}"))) {
+                    Toast.makeText(this, "יש להזין קוד בן שש ספרות.", Toast.LENGTH_SHORT).show()
                     return@setOnClickListener
                 }
+                val endpoint = discovered ?: run {
+                    val host = hostInput.text.toString().trim()
+                    val port = portInput.text.toString().toIntOrNull()
+                    if (host.isBlank() || port == null || port !in 1..65535) {
+                        Toast.makeText(this, "לא נמצא פורט אוטומטית. הזן כתובת IP ופורט שיוך.", Toast.LENGTH_LONG).show()
+                        return@setOnClickListener
+                    }
+                    KadbGateway.DiscoveredEndpoint(host, port, "הזנה ידנית")
+                }
+
                 dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = false
+                discoveryText.text = "מתחבר לפורט הזיווג ומאמת את הקוד…"
                 scope.launch {
                     try {
-                        adbGateway.pair(host, port, code)
-                        prefs.edit().putString(KEY_HOST, host).apply()
+                        adbGateway.pair(endpoint.host, endpoint.port, code)
+                        prefs.edit().putString(KEY_HOST, endpoint.host).apply()
                         adbConnected = false
-                        statusText.text = "Paired. Enter the connection port shown on the Wireless Debugging page."
                         dialog.dismiss()
-                        showConnectDialog()
+                        statusText.text = "השיוך הצליח. מחפש את פורט החיבור…"
+                        Toast.makeText(this@MainActivity, "השיוך הצליח. מנסה להתחבר אוטומטית.", Toast.LENGTH_LONG).show()
+                        connectAfterPairing(endpoint.host)
                     } catch (error: Throwable) {
                         dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = true
-                        showError("Pairing failed", error.message ?: "Check the IP, port and code")
+                        discoveryText.text = "השיוך נכשל. בדוק שהקוד עדיין בתוקף וששני השירותים באותה רשת Wi‑Fi."
+                        showError("השיוך נכשל", error.message ?: "בדוק כתובת, פורט וקוד שיוך.")
                     }
                 }
             }
         }
         dialog.show()
+
+        scope.launch {
+            discoveryText.text = "מחפש את שירות השיוך ברשת המקומית…"
+            discovered = runCatching {
+                adbGateway.discoverPairingEndpoint(this@MainActivity, timeoutMs = 8_000)
+            }.getOrNull()
+            if (discovered != null) {
+                discoveryText.text = "נמצא מכשיר: ${discovered!!.name}\nכתובת: ${discovered!!.host}\nהזן את הקוד שמופיע בהגדרות."
+                hostInput.setText(discovered!!.host)
+                portInput.setText(discovered!!.port.toString())
+                manualButton.text = "הצג פרטי חיבור ידניים"
+            } else {
+                discoveryText.text = "לא נמצא שירות אוטומטית. ודא שפתחת ״שיוך באמצעות קוד״ בהגדרות, או בחר הזנה ידנית."
+                hostInput.visibility = View.VISIBLE
+                portInput.visibility = View.VISIBLE
+            }
+        }
+    }
+
+    private fun connectAfterPairing(preferredHost: String?) {
+        scope.launch {
+            statusText.text = "מחפש את שירות החיבור האלחוטי…"
+            val endpoint = runCatching {
+                adbGateway.discoverConnectEndpoint(this@MainActivity, preferredHost, timeoutMs = 10_000)
+            }.getOrNull()
+            if (endpoint != null) {
+                connectToEndpoint(endpoint.host, endpoint.port)
+            } else {
+                statusText.text = "השיוך הצליח, אך הזיהוי האוטומטי לא מצא פורט חיבור. אפשר להזין אותו ידנית."
+                showConnectDialog()
+            }
+        }
     }
 
     private fun showConnectDialog() {
         val form = formLayout()
-        val hostInput = input("Device IP address", prefs.getString(KEY_HOST, "") ?: "")
+        val discoveryText = text("מאתר את פורט החיבור ברשת המקומית…", 13, Color.DKGRAY, false)
+        val hostInput = input("כתובת IP", prefs.getString(KEY_HOST, "") ?: "")
         val portInput = input(
-            "Wireless Debugging connection port",
-            prefs.getInt(KEY_CONNECT_PORT, -1).takeIf { it > 0 }?.toString() ?: ""
+            "פורט חיבור (לא פורט השיוך)",
+            prefs.getInt(KEY_CONNECT_PORT, -1).takeIf { it > 0 }?.toString() ?: "",
+            number = true
         )
+        hostInput.visibility = View.GONE
+        portInput.visibility = View.GONE
+        val manualButton = actionButton("הזנה ידנית") {
+            hostInput.visibility = View.VISIBLE
+            portInput.visibility = View.VISIBLE
+        }
+        form.addView(discoveryText)
+        form.addView(manualButton)
         form.addView(hostInput)
         form.addView(portInput)
+
+        var discovered: KadbGateway.DiscoveredEndpoint? = null
         val dialog = AlertDialog.Builder(this)
-            .setTitle("Connect to this device")
-            .setMessage("Use the IP address and connection port shown on the main Wireless Debugging screen, not the temporary pairing port.")
+            .setTitle("התחברות למכשיר")
             .setView(form)
-            .setNegativeButton("Cancel", null)
-            .setPositiveButton("Connect", null)
+            .setNegativeButton("ביטול", null)
+            .setPositiveButton("התחבר", null)
             .create()
         dialog.setOnShowListener {
+            dialog.window?.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                val host = hostInput.text.toString().trim()
-                val port = portInput.text.toString().toIntOrNull()
-                if (host.isBlank() || port == null || port !in 1..65535) {
-                    Toast.makeText(this, "Enter a valid IP address and connection port.", Toast.LENGTH_SHORT).show()
-                    return@setOnClickListener
+                val endpoint = discovered ?: run {
+                    val host = hostInput.text.toString().trim()
+                    val port = portInput.text.toString().toIntOrNull()
+                    if (host.isBlank() || port == null || port !in 1..65535) {
+                        Toast.makeText(this, "לא נמצא פורט. הזן כתובת IP ופורט חיבור תקין.", Toast.LENGTH_SHORT).show()
+                        return@setOnClickListener
+                    }
+                    KadbGateway.DiscoveredEndpoint(host, port, "הזנה ידנית")
                 }
                 dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = false
+                discoveryText.text = "בודק חיבור והרשאת ADB…"
                 scope.launch {
-                    try {
-                        val result = adbGateway.testConnection(host, port)
-                        check(result.exitCode == 0 && result.output.contains("APPVAULT_CONNECTED")) {
-                            result.output.ifBlank { "ADB did not return the connection test response." }
-                        }
-                        prefs.edit().putString(KEY_HOST, host).putInt(KEY_CONNECT_PORT, port).apply()
-                        adbConnected = true
-                        statusText.text = "ADB connected · $host:$port · shell authorization active"
+                    val success = connectToEndpoint(endpoint.host, endpoint.port, showErrors = false)
+                    if (success) {
                         dialog.dismiss()
-                        pendingUninstallPackage?.let { packageName ->
-                            pendingUninstallPackage = null
-                            val hadExport = pendingUninstallHasExport
-                            pendingUninstallHasExport = false
-                            val app = InstalledApps.load(this@MainActivity).firstOrNull { it.packageName == packageName }
-                            if (app != null) confirmPreservingUninstall(app, exportJustCompleted = hadExport)
-                        }
-                    } catch (error: Throwable) {
-                        adbConnected = false
+                        completePendingUninstall()
+                    } else {
                         dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = true
-                        showError("Connection failed", error.message ?: "Check Wireless Debugging and the connection port")
+                        discoveryText.text = "החיבור נכשל. ודא שניפוי באגים אלחוטי פעיל ושהמכשיר מאשר את מפתח ADB."
+                        showError("ההתחברות נכשלה", "בדוק שהמכשיר והאפליקציה באותה רשת Wi‑Fi ונסה לרענן את פורט החיבור.")
                     }
                 }
             }
         }
         dialog.show()
+
+        scope.launch {
+            discovered = runCatching {
+                adbGateway.discoverConnectEndpoint(
+                    this@MainActivity,
+                    prefs.getString(KEY_HOST, null),
+                    timeoutMs = 8_000
+                )
+            }.getOrNull()
+            if (discovered != null) {
+                hostInput.setText(discovered!!.host)
+                portInput.setText(discovered!!.port.toString())
+                discoveryText.text = "נמצא פורט חיבור אוטומטית. לחץ על ״התחבר״."
+            } else {
+                discoveryText.text = "לא נמצא פורט אוטומטית. פתח את ניפוי הבאגים האלחוטי או הזן פרטים ידנית."
+                hostInput.visibility = View.VISIBLE
+                portInput.visibility = View.VISIBLE
+            }
+        }
+    }
+
+    private suspend fun connectToEndpoint(
+        host: String,
+        port: Int,
+        showErrors: Boolean = true
+    ): Boolean {
+        return try {
+            val result = adbGateway.testConnection(host, port)
+            check(result.exitCode == 0 && result.output.contains("APPVAULT_CONNECTED")) {
+                result.output.ifBlank { "התקן Android לא החזיר תשובת חיבור." }
+            }
+            prefs.edit().putString(KEY_HOST, host).putInt(KEY_CONNECT_PORT, port).apply()
+            adbConnected = true
+            statusText.text = "מחובר לניפוי באגים אלחוטי · $host:$port"
+            Toast.makeText(this, "החיבור למכשיר הצליח.", Toast.LENGTH_SHORT).show()
+            true
+        } catch (error: Throwable) {
+            adbConnected = false
+            statusText.text = "החיבור נכשל"
+            if (showErrors) showError("ההתחברות נכשלה", error.message ?: "בדוק את הגדרות ניפוי הבאגים.")
+            false
+        }
+    }
+
+    private fun completePendingUninstall() {
+        pendingUninstallPackage?.let { packageName ->
+            pendingUninstallPackage = null
+            val hadExport = pendingUninstallHasExport
+            pendingUninstallHasExport = false
+            val app = InstalledApps.load(this@MainActivity).firstOrNull { it.packageName == packageName }
+            if (app != null) confirmPreservingUninstall(app, exportJustCompleted = hadExport)
+        }
+    }
+
+    private fun openWirelessDebuggingSettings() {
+        try {
+            startActivity(Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS))
+        } catch (error: Throwable) {
+            showError("לא ניתן לפתוח את הגדרות המפתחים", "פתח ידנית: הגדרות > מערכת > אפשרויות למפתחים > ניפוי באגים אלחוטי.")
+        }
     }
 
     private fun installPendingBundle() {
         val bundle = pendingRestore ?: return
         if (!packageManager.canRequestPackageInstalls()) {
             AlertDialog.Builder(this)
-                .setTitle("Allow app installation")
-                .setMessage("Android requires you to allow App Vault to install APK files. This is an Android system permission, not Root or Shizuku.")
-                .setNegativeButton("Cancel") { _, _ ->
+                .setTitle("אישור התקנת אפליקציות")
+                .setMessage("Android דורש לאשר לכספת אפליקציות להתקין קובצי APK. זהו אישור מערכת רגיל, ללא Root או Shizuku.")
+                .setNegativeButton("ביטול") { _, _ ->
                     pendingRestore?.directory?.deleteRecursively()
                     pendingRestore = null
                 }
-                .setPositiveButton("Open Android Settings") { _, _ ->
+                .setPositiveButton("פתיחת הגדרות Android") { _, _ ->
                     startActivity(Intent(
                         Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
                         Uri.parse("package:$packageName")
@@ -434,12 +555,12 @@ class MainActivity : Activity() {
         try {
             ApkInstaller.install(this, bundle)
             pendingRestore = null
-            statusText.text = "Install session sent to Android. Complete the system confirmation if shown."
+            statusText.text = "בקשת ההתקנה נשלחה ל־Android. יש לאשר את ההתקנה בחלון המערכת אם יוצג."
         } catch (error: InstallPermissionRequiredException) {
             startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:$packageName")))
         } catch (error: Throwable) {
-            showError("Could not start installation", error.message ?: "PackageInstaller error")
-            statusText.text = "Install could not start"
+            showError("לא ניתן להתחיל בהתקנה", error.message ?: "שגיאת מתקין החבילות")
+            statusText.text = "לא ניתן להתחיל את ההתקנה"
         }
     }
 
@@ -457,6 +578,8 @@ class MainActivity : Activity() {
         if (number) inputType = android.text.InputType.TYPE_CLASS_NUMBER
         setTextColor(Color.BLACK)
         setHintTextColor(Color.DKGRAY)
+        textDirection = View.TEXT_DIRECTION_LTR
+        textAlignment = View.TEXT_ALIGNMENT_VIEW_START
     }
 
     private fun text(value: String, size: Int, color: Int, bold: Boolean) = TextView(this).apply {
@@ -491,7 +614,7 @@ class MainActivity : Activity() {
 
     private fun showError(title: String, message: String) {
         AlertDialog.Builder(this).setTitle(title).setMessage(message)
-            .setPositiveButton("OK", null).show()
+            .setPositiveButton("אישור", null).show()
     }
 
     companion object {
