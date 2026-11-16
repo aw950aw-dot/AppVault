@@ -1,3 +1,4 @@
+# AppVault build pipeline; extracts the uploaded source archive before compiling.
 name: build release APK
 
 on:
