@@ -3,6 +3,7 @@ package com.appvault.android.backup
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import java.util.Locale
 import android.content.pm.PackageInstaller
 import android.os.Build
 import android.widget.Toast
@@ -22,12 +23,12 @@ class InstallStatusReceiver : BroadcastReceiver() {
             }
             PackageInstaller.STATUS_SUCCESS -> {
                 val name = intent.getStringExtra(PackageInstaller.EXTRA_PACKAGE_NAME).orEmpty()
-                Toast.makeText(context, "Installed ${name.ifBlank { "application" }}", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, "האפליקציה ${name.ifBlank { "שנבחרה" }} הותקנה בהצלחה", Toast.LENGTH_LONG).show()
             }
             else -> {
                 val message = intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE)
-                    ?: "Android could not install this package"
-                Toast.makeText(context, "Install failed: $message", Toast.LENGTH_LONG).show()
+                    ?: "Android לא הצליח להתקין את החבילה"
+                Toast.makeText(context, "ההתקנה נכשלה: $message", Toast.LENGTH_LONG).show()
             }
         }
     }
