@@ -7,6 +7,10 @@ on:
     paths:
       - 'AppVault-source.zip'
       - '.github/workflows/build-release-apk.yml'
+      - 'app/**'
+      - '*.gradle.kts'
+      - 'gradle.properties'
+      - 'settings.gradle.kts'
   workflow_dispatch:
 
 permissions:
