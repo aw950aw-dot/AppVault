@@ -31,6 +31,9 @@ jobs:
           unzip -q AppVault-source.zip -d "$RUNNER_TEMP/appvault-archive"
           test -f "$RUNNER_TEMP/appvault-archive/AppVault/app/build.gradle.kts"
           cp -a "$RUNNER_TEMP/appvault-archive/AppVault/." .
+          # Keep the bootstrap workflow in the repository; do not overwrite it with
+          # the older workflow bundled inside the source archive.
+          git checkout -- .github/workflows/build-release-apk.yml
           test -f app/src/main/AndroidManifest.xml
           test -f .github/workflows/build-release-apk.yml
 
@@ -45,6 +48,8 @@ jobs:
           git add -A
           if ! git diff --cached --quiet; then
             git commit -m "Extract AppVault Android project from source archive"
+            git fetch origin main
+            git rebase origin/main
             git push origin HEAD:main
           else
             echo "Project files are already extracted."
