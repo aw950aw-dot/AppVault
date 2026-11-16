@@ -59,7 +59,7 @@ kotlin {
 dependencies {
     // Embedded ADB client: pairing, TLS connection and narrowly scoped shell operations.
     implementation("com.flyfishxu:kadb:2.1.5")
-    implementation("com.flyfishxu:kadb-mdns:2.1.5")
+    implementation("com.flyfishxu:kadb-mdns-android:2.1.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
 
     testImplementation("junit:junit:4.13.2")
