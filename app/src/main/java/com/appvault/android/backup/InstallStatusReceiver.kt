@@ -3,7 +3,6 @@ package com.appvault.android.backup
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import java.util.Locale
 import android.content.pm.PackageInstaller
 import android.os.Build
 import android.widget.Toast
