@@ -317,23 +317,17 @@ class MainActivity : Activity() {
 
     private fun showPairDialog() {
         val form = formLayout()
-        val discoveryText = text("מאתר אוטומטית את שירות השיוך…", 13, Color.DKGRAY, false)
+        val help = text(
+            "פתח בהגדרות Android את ״שיוך באמצעות קוד״. הזן כאן את כתובת ה־IP, פורט השיוך והקוד בן שש הספרות שמוצגים שם.",
+            13, Color.DKGRAY, false
+        )
         val codeInput = input("קוד שיוך בן 6 ספרות", "", number = true)
-        val hostInput = input("כתובת IP (לגיבוי בלבד)", prefs.getString(KEY_HOST, "") ?: "")
-        val portInput = input("פורט שיוך (לגיבוי בלבד)", "", number = true)
-        var discovered: KadbGateway.DiscoveredEndpoint? = null
-        hostInput.visibility = View.GONE
-        portInput.visibility = View.GONE
-        val manualButton = actionButton("אין זיהוי אוטומטי? הזנה ידנית") {
-            discovered = null
-            hostInput.visibility = View.VISIBLE
-            portInput.visibility = View.VISIBLE
-        }
-        form.addView(discoveryText)
-        form.addView(codeInput)
-        form.addView(manualButton)
+        val hostInput = input("כתובת IP של המכשיר", prefs.getString(KEY_HOST, "") ?: "")
+        val portInput = input("פורט שיוך (ממסך שיוך באמצעות קוד)", "", number = true)
+        form.addView(help)
         form.addView(hostInput)
         form.addView(portInput)
+        form.addView(codeInput)
 
         val dialog = AlertDialog.Builder(this)
             .setTitle("שיוך אלחוטי")
@@ -345,94 +339,63 @@ class MainActivity : Activity() {
         dialog.setOnShowListener {
             dialog.window?.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val host = hostInput.text.toString().trim()
+                val port = portInput.text.toString().toIntOrNull()
                 val code = codeInput.text.toString().trim()
+                if (host.isBlank() || port == null || port !in 1..65535) {
+                    Toast.makeText(this, "הזן כתובת IP ופורט שיוך תקינים.", Toast.LENGTH_LONG).show()
+                    return@setOnClickListener
+                }
                 if (!code.matches(Regex("[0-9]{6}"))) {
                     Toast.makeText(this, "יש להזין קוד בן שש ספרות.", Toast.LENGTH_SHORT).show()
                     return@setOnClickListener
                 }
-                val endpoint = discovered ?: run {
-                    val host = hostInput.text.toString().trim()
-                    val port = portInput.text.toString().toIntOrNull()
-                    if (host.isBlank() || port == null || port !in 1..65535) {
-                        Toast.makeText(this, "לא נמצא פורט אוטומטית. הזן כתובת IP ופורט שיוך.", Toast.LENGTH_LONG).show()
-                        return@setOnClickListener
-                    }
-                    KadbGateway.DiscoveredEndpoint(host, port, "הזנה ידנית")
-                }
 
                 dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = false
-                discoveryText.text = "מתחבר לפורט הזיווג ומאמת את הקוד…"
+                help.text = "מתחבר לפורט השיוך ומאמת את הקוד…"
                 scope.launch {
                     try {
-                        adbGateway.pair(endpoint.host, endpoint.port, code)
-                        prefs.edit().putString(KEY_HOST, endpoint.host).apply()
+                        adbGateway.pair(host, port, code)
+                        prefs.edit().putString(KEY_HOST, host).apply()
                         adbConnected = false
                         dialog.dismiss()
-                        statusText.text = "השיוך הצליח. מחפש את פורט החיבור…"
-                        Toast.makeText(this@MainActivity, "השיוך הצליח. מנסה להתחבר אוטומטית.", Toast.LENGTH_LONG).show()
-                        connectAfterPairing(endpoint.host)
+                        statusText.text = "השיוך הצליח. הזן את פורט החיבור."
+                        Toast.makeText(this@MainActivity, "השיוך הצליח.", Toast.LENGTH_LONG).show()
+                        showConnectDialog()
                     } catch (error: Throwable) {
                         dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = true
-                        discoveryText.text = "השיוך נכשל. בדוק שהקוד עדיין בתוקף וששני השירותים באותה רשת Wi‑Fi."
+                        help.text = "השיוך נכשל. בדוק שהקוד עדיין בתוקף ושהכתובת והפורט נכונים."
                         showError("השיוך נכשל", error.message ?: "בדוק כתובת, פורט וקוד שיוך.")
                     }
                 }
             }
         }
         dialog.show()
-
-        scope.launch {
-            discoveryText.text = "מחפש את שירות השיוך ברשת המקומית…"
-            discovered = runCatching {
-                adbGateway.discoverPairingEndpoint(this@MainActivity, timeoutMs = 8_000)
-            }.getOrNull()
-            if (discovered != null) {
-                discoveryText.text = "נמצא מכשיר: ${discovered!!.name}\nכתובת: ${discovered!!.host}\nהזן את הקוד שמופיע בהגדרות."
-                hostInput.setText(discovered!!.host)
-                portInput.setText(discovered!!.port.toString())
-                manualButton.text = "הצג פרטי חיבור ידניים"
-            } else {
-                discoveryText.text = "לא נמצא שירות אוטומטית. ודא שפתחת ״שיוך באמצעות קוד״ בהגדרות, או בחר הזנה ידנית."
-                hostInput.visibility = View.VISIBLE
-                portInput.visibility = View.VISIBLE
-            }
-        }
     }
 
     private fun connectAfterPairing(preferredHost: String?) {
-        scope.launch {
-            statusText.text = "מחפש את שירות החיבור האלחוטי…"
-            val endpoint = runCatching {
-                adbGateway.discoverConnectEndpoint(this@MainActivity, preferredHost, timeoutMs = 10_000)
-            }.getOrNull()
-            if (endpoint != null && connectToEndpoint(endpoint.host, endpoint.port)) {
-                completePendingUninstall()
-            } else {
-                statusText.text = "השיוך הצליח, אך הזיהוי האוטומטי לא מצא פורט חיבור. אפשר להזין אותו ידנית."
-                showConnectDialog()
-            }
+        // Do not start background mDNS discovery here: some Android builds crash
+        // inside the platform discovery service. Ask for the normal TLS port instead.
+        if (!preferredHost.isNullOrBlank()) {
+            prefs.edit().putString(KEY_HOST, preferredHost).apply()
         }
+        statusText.text = "השיוך הצליח. הזן את פורט החיבור שמוצג במסך ניפוי הבאגים האלחוטי."
+        showConnectDialog()
     }
 
     private fun showConnectDialog() {
         val form = formLayout()
-        val discoveryText = text("מאתר את פורט החיבור ברשת המקומית…", 13, Color.DKGRAY, false)
+        val help = text(
+            "הזן את כתובת ה־IP ואת פורט החיבור הרגיל שמופיעים במסך ״ניפוי באגים אלחוטי״. שים לב: זה אינו פורט השיוך.",
+            13, Color.DKGRAY, false
+        )
         val hostInput = input("כתובת IP", prefs.getString(KEY_HOST, "") ?: "")
         val portInput = input(
             "פורט חיבור (לא פורט השיוך)",
             prefs.getInt(KEY_CONNECT_PORT, -1).takeIf { it > 0 }?.toString() ?: "",
             number = true
         )
-        var discovered: KadbGateway.DiscoveredEndpoint? = null
-        hostInput.visibility = View.GONE
-        portInput.visibility = View.GONE
-        val manualButton = actionButton("הזנה ידנית") {
-            discovered = null
-            hostInput.visibility = View.VISIBLE
-            portInput.visibility = View.VISIBLE
-        }
-        form.addView(discoveryText)
-        form.addView(manualButton)
+        form.addView(help)
         form.addView(hostInput)
         form.addView(portInput)
 
@@ -445,50 +408,28 @@ class MainActivity : Activity() {
         dialog.setOnShowListener {
             dialog.window?.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                val endpoint = discovered ?: run {
-                    val host = hostInput.text.toString().trim()
-                    val port = portInput.text.toString().toIntOrNull()
-                    if (host.isBlank() || port == null || port !in 1..65535) {
-                        Toast.makeText(this, "לא נמצא פורט. הזן כתובת IP ופורט חיבור תקין.", Toast.LENGTH_SHORT).show()
-                        return@setOnClickListener
-                    }
-                    KadbGateway.DiscoveredEndpoint(host, port, "הזנה ידנית")
+                val host = hostInput.text.toString().trim()
+                val port = portInput.text.toString().toIntOrNull()
+                if (host.isBlank() || port == null || port !in 1..65535) {
+                    Toast.makeText(this, "הזן כתובת IP ופורט חיבור תקינים.", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
                 }
                 dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = false
-                discoveryText.text = "בודק חיבור והרשאת ADB…"
+                help.text = "בודק חיבור והרשאת ADB…"
                 scope.launch {
-                    val success = connectToEndpoint(endpoint.host, endpoint.port, showErrors = false)
+                    val success = connectToEndpoint(host, port, showErrors = false)
                     if (success) {
                         dialog.dismiss()
                         completePendingUninstall()
                     } else {
                         dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = true
-                        discoveryText.text = "החיבור נכשל. ודא שניפוי באגים אלחוטי פעיל ושהמכשיר מאשר את מפתח ADB."
+                        help.text = "החיבור נכשל. ודא שניפוי באגים אלחוטי פעיל ושהמכשיר מאשר את מפתח ADB."
                         showError("ההתחברות נכשלה", "בדוק שהמכשיר והאפליקציה באותה רשת Wi‑Fi ונסה לרענן את פורט החיבור.")
                     }
                 }
             }
         }
         dialog.show()
-
-        scope.launch {
-            discovered = runCatching {
-                adbGateway.discoverConnectEndpoint(
-                    this@MainActivity,
-                    prefs.getString(KEY_HOST, null),
-                    timeoutMs = 8_000
-                )
-            }.getOrNull()
-            if (discovered != null) {
-                hostInput.setText(discovered!!.host)
-                portInput.setText(discovered!!.port.toString())
-                discoveryText.text = "נמצא פורט חיבור אוטומטית. לחץ על ״התחבר״."
-            } else {
-                discoveryText.text = "לא נמצא פורט אוטומטית. פתח את ניפוי הבאגים האלחוטי או הזן פרטים ידנית."
-                hostInput.visibility = View.VISIBLE
-                portInput.visibility = View.VISIBLE
-            }
-        }
     }
 
     private suspend fun connectToEndpoint(
