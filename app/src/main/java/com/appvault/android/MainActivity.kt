@@ -117,8 +117,8 @@ class MainActivity : Activity() {
         })
         content.addView(text(
             "אין צורך ב־Root או ב־Shizuku. לקוח ADB מובנה באפליקציה. " +
-                "יש להפעיל אפשרויות למפתחים וניפוי באגים אלחוטי, לפתוח במסך ההגדרות את ״שיוך באמצעות קוד״ ולהזין את הקוד בן שש הספרות. " +
-                "השאר את חלון הקוד פתוח עד לסיום השיוך. האפליקציה תאתר אוטומטית את פורט השיוך והחיבור. נדרש Android 11 ומעלה.",
+                "יש להפעיל אפשרויות למפתחים וניפוי באגים אלחוטי, לפתוח ״שיוך באמצעות קוד״, ולהציג את כספת אפליקציות וההגדרות זו לצד זו בחלון מפוצל. " +
+                "השאר את חלון הקוד פתוח, הזן את הקוד באפליקציה, ואחרי השיוך אין צורך להשאיר את מסך ההגדרות פתוח: פורט החיבור יזוהה אוטומטית. נדרש Android 11 ומעלה.",
             13, Color.rgb(148, 163, 184), false
         ))
 
@@ -322,9 +322,11 @@ class MainActivity : Activity() {
         val codeInput = input("קוד שיוך בן 6 ספרות", "", number = true)
         val hostInput = input("כתובת IP (לגיבוי בלבד)", prefs.getString(KEY_HOST, "") ?: "")
         val portInput = input("פורט שיוך (לגיבוי בלבד)", "", number = true)
+        var discovered: KadbGateway.DiscoveredEndpoint? = null
         hostInput.visibility = View.GONE
         portInput.visibility = View.GONE
         val manualButton = actionButton("אין זיהוי אוטומטי? הזנה ידנית") {
+            discovered = null
             hostInput.visibility = View.VISIBLE
             portInput.visibility = View.VISIBLE
         }
@@ -334,7 +336,6 @@ class MainActivity : Activity() {
         form.addView(hostInput)
         form.addView(portInput)
 
-        var discovered: KadbGateway.DiscoveredEndpoint? = null
         val dialog = AlertDialog.Builder(this)
             .setTitle("שיוך אלחוטי")
             .setView(form)
@@ -405,10 +406,8 @@ class MainActivity : Activity() {
             val endpoint = runCatching {
                 adbGateway.discoverConnectEndpoint(this@MainActivity, preferredHost, timeoutMs = 10_000)
             }.getOrNull()
-            if (endpoint != null) {
-                if (connectToEndpoint(endpoint.host, endpoint.port)) {
-                    completePendingUninstall()
-                }
+            if (endpoint != null && connectToEndpoint(endpoint.host, endpoint.port)) {
+                completePendingUninstall()
             } else {
                 statusText.text = "השיוך הצליח, אך הזיהוי האוטומטי לא מצא פורט חיבור. אפשר להזין אותו ידנית."
                 showConnectDialog()
@@ -425,9 +424,11 @@ class MainActivity : Activity() {
             prefs.getInt(KEY_CONNECT_PORT, -1).takeIf { it > 0 }?.toString() ?: "",
             number = true
         )
+        var discovered: KadbGateway.DiscoveredEndpoint? = null
         hostInput.visibility = View.GONE
         portInput.visibility = View.GONE
         val manualButton = actionButton("הזנה ידנית") {
+            discovered = null
             hostInput.visibility = View.VISIBLE
             portInput.visibility = View.VISIBLE
         }
@@ -436,7 +437,6 @@ class MainActivity : Activity() {
         form.addView(hostInput)
         form.addView(portInput)
 
-        var discovered: KadbGateway.DiscoveredEndpoint? = null
         val dialog = AlertDialog.Builder(this)
             .setTitle("התחברות למכשיר")
             .setView(form)
