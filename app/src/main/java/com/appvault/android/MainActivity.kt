@@ -118,7 +118,7 @@ class MainActivity : Activity() {
         content.addView(text(
             "אין צורך ב־Root או ב־Shizuku. לקוח ADB מובנה באפליקציה. " +
                 "יש להפעיל אפשרויות למפתחים וניפוי באגים אלחוטי, לפתוח במסך ההגדרות את ״שיוך באמצעות קוד״ ולהזין את הקוד בן שש הספרות. " +
-                "האפליקציה תאתר אוטומטית את פורט השיוך והחיבור. נדרש Android 11 ומעלה.",
+                "השאר את חלון הקוד פתוח עד לסיום השיוך. האפליקציה תאתר אוטומטית את פורט השיוך והחיבור. נדרש Android 11 ומעלה.",
             13, Color.rgb(148, 163, 184), false
         ))
 
@@ -325,10 +325,8 @@ class MainActivity : Activity() {
         hostInput.visibility = View.GONE
         portInput.visibility = View.GONE
         val manualButton = actionButton("אין זיהוי אוטומטי? הזנה ידנית") {
-            val show = hostInput.visibility != View.VISIBLE
-            hostInput.visibility = if (show) View.VISIBLE else View.GONE
-            portInput.visibility = if (show) View.VISIBLE else View.GONE
-            (it as? Button)?.text = if (show) "הסתרת הזנה ידנית" else "אין זיהוי אוטומטי? הזנה ידנית"
+            hostInput.visibility = View.VISIBLE
+            portInput.visibility = View.VISIBLE
         }
         form.addView(discoveryText)
         form.addView(codeInput)
@@ -408,7 +406,9 @@ class MainActivity : Activity() {
                 adbGateway.discoverConnectEndpoint(this@MainActivity, preferredHost, timeoutMs = 10_000)
             }.getOrNull()
             if (endpoint != null) {
-                connectToEndpoint(endpoint.host, endpoint.port)
+                if (connectToEndpoint(endpoint.host, endpoint.port)) {
+                    completePendingUninstall()
+                }
             } else {
                 statusText.text = "השיוך הצליח, אך הזיהוי האוטומטי לא מצא פורט חיבור. אפשר להזין אותו ידנית."
                 showConnectDialog()
@@ -565,6 +565,7 @@ class MainActivity : Activity() {
     }
 
     private fun formLayout() = LinearLayout(this).apply {
+        layoutDirection = View.LAYOUT_DIRECTION_RTL
         orientation = LinearLayout.VERTICAL
         setPadding(dp(20), dp(8), dp(20), dp(4))
     }
