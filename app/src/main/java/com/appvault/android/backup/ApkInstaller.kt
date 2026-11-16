@@ -53,5 +53,5 @@ object ApkInstaller {
 }
 
 class InstallPermissionRequiredException : Exception(
-    "Allow App Vault to install apps in Android Settings, then tap Restore again."
+    "יש לאשר לכספת אפליקציות להתקין אפליקציות בהגדרות Android, ואז לנסות שחזור שוב."
 )
