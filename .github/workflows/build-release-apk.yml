@@ -34,7 +34,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/appvault-archive"
           unzip -q AppVault-source.zip -d "$RUNNER_TEMP/appvault-archive"
           test -f "$RUNNER_TEMP/appvault-archive/AppVault/app/build.gradle.kts"
-          cp -a "$RUNNER_TEMP/appvault-archive/AppVault/." .
+          cp -an "$RUNNER_TEMP/appvault-archive/AppVault/." .
           # Keep the bootstrap workflow in the repository; do not overwrite it with
           # the older workflow bundled inside the source archive.
           git checkout -- .github/workflows/build-release-apk.yml
