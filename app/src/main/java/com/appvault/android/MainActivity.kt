@@ -332,11 +332,12 @@ class MainActivity : Activity() {
         val formScroll = ScrollView(this).apply {
             isFillViewport = false
             isVerticalScrollBarEnabled = true
+            layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(190))
             addView(form, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
         }
         val dialog = AlertDialog.Builder(this)
             .setTitle("שיוך אלחוטי")
-            .setView(formScroll, ViewGroup.LayoutParams.MATCH_PARENT, dp(190))
+            .setView(formScroll)
             .setNegativeButton("ביטול", null)
             .setPositiveButton("בצע שיוך", null)
             .create()
@@ -407,11 +408,12 @@ class MainActivity : Activity() {
         val formScroll = ScrollView(this).apply {
             isFillViewport = false
             isVerticalScrollBarEnabled = true
+            layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(150))
             addView(form, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
         }
         val dialog = AlertDialog.Builder(this)
             .setTitle("התחברות למכשיר")
-            .setView(formScroll, ViewGroup.LayoutParams.MATCH_PARENT, dp(150))
+            .setView(formScroll)
             .setNegativeButton("ביטול", null)
             .setPositiveButton("התחבר", null)
             .create()
