@@ -1,5 +1,6 @@
 plugins {
     id("com.android.application")
+    id("org.jetbrains.kotlin.android")
 }
 
 android {
@@ -48,6 +49,12 @@ android {
     }
 }
 
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}
 
 dependencies {
     // Embedded ADB client: pairing, TLS connection and narrowly scoped shell operations.
