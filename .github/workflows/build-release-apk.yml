@@ -77,7 +77,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          sdkmanager "platforms;android-37" "build-tools;36.0.0"
+          sdkmanager --channel=1 "platforms;android-37.0" "build-tools;37.0.0"
 
       - name: Run tests and build APKs
         run: gradle --no-daemon clean testDebugUnitTest assembleDebug assembleRelease
