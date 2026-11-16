@@ -10,7 +10,6 @@
     <application
         android:name=".AppVaultApplication"
         android:allowBackup="false"
-        android:usesCleartextTraffic="false"
         android:icon="@android:drawable/ic_menu_save"
         android:label="@string/app_name"
         android:supportsRtl="true"
