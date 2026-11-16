@@ -49,11 +49,11 @@ object BackupBundleManager {
         requirePackageName(packageName)
         val pm = context.packageManager
         val packageInfo = getPackageInfo(pm, packageName)
-        val appInfo = packageInfo.applicationInfo ?: error("Package has no application information")
+        val appInfo = packageInfo.applicationInfo ?: error("לא נמצאו פרטי אפליקציה עבור החבילה")
 
         val baseApk = File(appInfo.sourceDir)
         require(baseApk.isFile && baseApk.canRead()) {
-            "Android did not allow reading the installed base APK. This device may restrict APK file access."
+            "Android לא אפשר לקרוא את קובץ ה־APK הראשי. ייתכן שהמכשיר מגביל גישה לקובצי התקנה."
         }
 
         val entries = mutableListOf<Triple<String, File, Pair<String, String?>>>()
@@ -64,7 +64,7 @@ object BackupBundleManager {
         splitPaths.forEachIndexed { index, path ->
             val splitFile = File(path)
             require(splitFile.isFile && splitFile.canRead()) {
-                "Could not read split APK ${splitFile.name}"
+                "לא ניתן לקרוא קובץ APK מפוצל ${splitFile.name}"
             }
             val splitName = splitNames.getOrNull(index) ?: "split_$index"
             val originalName = splitFile.name
@@ -74,7 +74,7 @@ object BackupBundleManager {
                 val safeSplit = splitName.replace(Regex("[^A-Za-z0-9_.-]"), "_")
                 "split_${index}_$safeSplit.apk"
             }
-            require(entries.none { it.first == safeName }) { "Duplicate split APK filename: $safeName" }
+            require(entries.none { it.first == safeName }) { "שם קובץ APK מפוצל כפול: $safeName" }
             entries += Triple(safeName, splitFile, "split" to splitName)
         }
 
@@ -134,14 +134,14 @@ object BackupBundleManager {
                 while (true) {
                     val entry = zip.nextEntry ?: break
                     count++
-                    require(count <= MAX_ARCHIVE_ENTRIES) { "Archive contains too many entries" }
-                    require(!entry.isDirectory) { "Directory entries are not supported" }
-                    require(isAllowedEntryName(entry.name)) { "Unsafe archive entry: ${entry.name}" }
-                    require(seenEntries.add(entry.name)) { "Duplicate archive entry" }
+                    require(count <= MAX_ARCHIVE_ENTRIES) { "קובץ הגיבוי מכיל מספר גדול מדי של פריטים" }
+                    require(!entry.isDirectory) { "קובץ הגיבוי מכיל תיקיות שאינן נתמכות" }
+                    require(isAllowedEntryName(entry.name)) { "פריט לא בטוח בקובץ הגיבוי: ${entry.name}" }
+                    require(seenEntries.add(entry.name)) { "פריט כפול בקובץ הגיבוי" }
 
                     if (entry.name == MANIFEST_NAME) {
                         val bytes = zip.readBounded(128 * 1024 + 1)
-                        require(bytes.size <= 128 * 1024) { "Manifest is unexpectedly large" }
+                        require(bytes.size <= 128 * 1024) { "קובץ פרטי הגיבוי גדול מהצפוי" }
                         manifestText = bytes.toString(Charsets.UTF_8)
                     } else {
                         val destination = File(directory, entry.name)
@@ -153,7 +153,7 @@ object BackupBundleManager {
                                 if (read < 0) break
                                 written += read
                                 totalBytes += read
-                                require(totalBytes <= MAX_UNCOMPRESSED_BYTES) { "Archive is too large" }
+                                require(totalBytes <= MAX_UNCOMPRESSED_BYTES) { "קובץ הגיבוי גדול מדי" }
                                 output.write(buffer, 0, read)
                             }
                         }
@@ -163,51 +163,51 @@ object BackupBundleManager {
                 }
             }
 
-            val manifest = JSONObject(manifestText ?: error("Backup manifest is missing"))
-            require(manifest.optInt("formatVersion") == FORMAT_VERSION) { "Unsupported backup format" }
+            val manifest = JSONObject(manifestText ?: error("קובץ פרטי הגיבוי חסר"))
+            require(manifest.optInt("formatVersion") == FORMAT_VERSION) { "תבנית קובץ הגיבוי אינה נתמכת" }
             val packageName = manifest.getString("packageName")
             requirePackageName(packageName)
             val expectedFiles = manifest.getJSONArray("files")
-            require(expectedFiles.length() in 1..MAX_ARCHIVE_ENTRIES) { "Invalid APK file list" }
+            require(expectedFiles.length() in 1..MAX_ARCHIVE_ENTRIES) { "רשימת קובצי APK אינה תקינה" }
 
             val apkFiles = mutableListOf<ApkFile>()
             val listedEntries = mutableSetOf<String>()
             for (index in 0 until expectedFiles.length()) {
                 val item = expectedFiles.getJSONObject(index)
                 val entryName = item.getString("entry")
-                require(isAllowedApkEntryName(entryName)) { "Invalid APK entry name" }
-                require(listedEntries.add(entryName)) { "Duplicate APK entry in manifest" }
-                val file = extracted[entryName] ?: error("Missing APK file: $entryName")
-                require(file.length() == item.getLong("size")) { "APK size check failed: $entryName" }
+                require(isAllowedApkEntryName(entryName)) { "שם קובץ APK אינו תקין" }
+                require(listedEntries.add(entryName)) { "קובץ APK מופיע יותר מפעם אחת בפרטי הגיבוי" }
+                val file = extracted[entryName] ?: error("קובץ APK חסר: $entryName")
+                require(file.length() == item.getLong("size")) { "בדיקת גודל קובץ APK נכשלה: $entryName" }
                 require(sha256(file).equals(item.getString("sha256"), ignoreCase = true)) {
-                    "APK checksum failed: $entryName"
+                    "בדיקת תקינות קובץ APK נכשלה: $entryName"
                 }
                 val kind = item.getString("kind")
-                require(kind == "base" || kind == "split") { "Invalid APK kind" }
+                require(kind == "base" || kind == "split") { "סוג קובץ APK אינו תקין" }
                 val splitName = if (item.isNull("splitName")) null else item.getString("splitName")
                 if (kind == "base") {
-                    require(entryName == "base.apk" && splitName == null) { "Invalid base APK metadata" }
+                    require(entryName == "base.apk" && splitName == null) { "פרטי קובץ ה־APK הראשי אינם תקינים" }
                 } else {
-                    require(splitName != null) { "Split APK name is missing" }
+                    require(splitName != null) { "שם קובץ APK מפוצל חסר" }
                 }
                 apkFiles += ApkFile(entryName, file, kind, splitName)
             }
 
             require(apkFiles.count { it.kind == "base" } == 1 && apkFiles.any { it.entryName == "base.apk" }) {
-                "Exactly one base APK is required"
+                "נדרש קובץ APK ראשי אחד בדיוק"
             }
             require(apkFiles.size == extracted.size && listedEntries == extracted.keys) {
-                "Archive contains unlisted APK files"
+                "קובץ הגיבוי מכיל קובצי APK שלא מופיעים ברשימה"
             }
 
             val base = apkFiles.first { it.kind == "base" }.file
             val archiveInfo = getArchivePackageInfo(context.packageManager, base)
-                ?: error("The base APK could not be read by Android")
-            require(archiveInfo.packageName == packageName) { "Package name in manifest does not match the APK" }
+                ?: error("Android לא הצליח לקרוא את קובץ ה־APK הראשי")
+            require(archiveInfo.packageName == packageName) { "שם החבילה בפרטי הגיבוי אינו תואם לקובץ ה־APK" }
 
             val signerSha256 = manifest.getString("signerSha256")
             require(signerFingerprint(archiveInfo).equals(signerSha256, ignoreCase = true)) {
-                "APK signer does not match the backup manifest"
+                "חתימת קובץ ה־APK אינה תואמת לפרטי הגיבוי"
             }
 
             return RestoredBundle(
@@ -227,7 +227,7 @@ object BackupBundleManager {
 
     fun copyBundleToUri(context: Context, bundle: File, uri: android.net.Uri) {
         val output = context.contentResolver.openOutputStream(uri, "w")
-            ?: error("Could not open the selected backup destination")
+            ?: error("לא ניתן לפתוח את יעד שמירת הגיבוי שנבחר")
         output.use { stream -> FileInputStream(bundle).use { it.copyTo(stream) } }
     }
 
@@ -250,7 +250,7 @@ object BackupBundleManager {
 
     private fun signerFingerprint(info: PackageInfo): String {
         val signers = info.signingInfo?.apkContentsSigners?.map { sha256(it.toByteArray()) }.orEmpty()
-        require(signers.isNotEmpty()) { "Could not read APK signing certificate" }
+        require(signers.isNotEmpty()) { "לא ניתן לקרוא את תעודת החתימה של קובץ ה־APK" }
         return signers.sorted().joinToString(":")
     }
 
@@ -280,7 +280,7 @@ object BackupBundleManager {
 
     private fun requirePackageName(packageName: String) {
         require(packageName.matches(Regex("[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+"))) {
-            "Invalid package name"
+            "שם חבילה לא תקין"
         }
     }
 
