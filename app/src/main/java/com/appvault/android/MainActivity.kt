@@ -322,7 +322,8 @@ class MainActivity : Activity() {
             13, Color.DKGRAY, false
         )
         val codeInput = input("קוד שיוך בן 6 ספרות", "", number = true)
-        val hostInput = input("כתובת IP של המכשיר", prefs.getString(KEY_HOST, "") ?: "")
+        val savedHost = prefs.getString(KEY_HOST, "") ?: ""
+        val hostInput = input("כתובת IP בלבד", savedHost.substringBeforeLast(':').takeIf { savedHost.count { ch -> ch == ':' } == 1 } ?: savedHost)
         val portInput = input("פורט שיוך (ממסך שיוך באמצעות קוד)", "", number = true)
         form.addView(help)
         form.addView(hostInput)
@@ -395,7 +396,8 @@ class MainActivity : Activity() {
             "הזן את כתובת ה־IP ואת פורט החיבור הרגיל שמופיעים במסך ״ניפוי באגים אלחוטי״. שים לב: זה אינו פורט השיוך.",
             13, Color.DKGRAY, false
         )
-        val hostInput = input("כתובת IP", prefs.getString(KEY_HOST, "") ?: "")
+        val savedHost = prefs.getString(KEY_HOST, "") ?: ""
+        val hostInput = input("כתובת IP בלבד (ללא פורט)", savedHost.substringBeforeLast(':').takeIf { savedHost.count { ch -> ch == ':' } == 1 } ?: savedHost)
         val portInput = input(
             "פורט חיבור (לא פורט השיוך)",
             prefs.getInt(KEY_CONNECT_PORT, -1).takeIf { it > 0 }?.toString() ?: "",
@@ -528,7 +530,11 @@ class MainActivity : Activity() {
         textSize = 14f
         setSingleLine(true)
         imeOptions = EditorInfo.IME_ACTION_NEXT
-        if (number) inputType = android.text.InputType.TYPE_CLASS_NUMBER
+        inputType = if (number) {
+            android.text.InputType.TYPE_CLASS_NUMBER
+        } else {
+            android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+        }
         setTextColor(Color.BLACK)
         setHintTextColor(Color.DKGRAY)
         textDirection = View.TEXT_DIRECTION_LTR
