@@ -1,15 +1,68 @@
 package com.appvault.android.adb
 
+import android.content.Context
+import com.flyfishxu.kadb.mdns.KadbMdnsAndroid
+import com.flyfishxu.kadb.mdns.MdnsDiscoveryState
+import com.flyfishxu.kadb.mdns.MdnsEndpoint
 import com.flyfishxu.kadb.Kadb
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Only exposes the exact ADB operations required by App Vault. There is deliberately
  * no arbitrary shell/terminal UI.
  */
 class KadbGateway {
+    data class DiscoveredEndpoint(val host: String, val port: Int, val name: String)
     data class CommandResult(val exitCode: Int, val output: String)
+
+
+    /**
+     * Best-effort discovery of the short-lived Wireless Debugging pairing port.
+     * Manual IP/port entry remains available when mDNS is blocked by the Wi-Fi network.
+     */
+    suspend fun discoverPairingEndpoint(context: Context, timeoutMs: Long = 8_000): DiscoveredEndpoint? =
+        discoverEndpoint(context, timeoutMs) { it.pairDevices }
+
+    /** Finds the normal TLS connection port announced after pairing. */
+    suspend fun discoverConnectEndpoint(
+        context: Context,
+        preferredHost: String? = null,
+        timeoutMs: Long = 10_000
+    ): DiscoveredEndpoint? = withContext(Dispatchers.IO) {
+        val mdns = KadbMdnsAndroid(context.applicationContext)
+        try {
+            mdns.start()
+            val state = withTimeoutOrNull(timeoutMs) {
+                mdns.state.first { it.connectDevices.isNotEmpty() }
+            }
+            val endpoints = state?.connectDevices.orEmpty()
+            val endpoint = endpoints.firstOrNull { it.host == preferredHost } ?: endpoints.firstOrNull()
+            endpoint?.let { DiscoveredEndpoint(it.host, it.port, it.name) }
+        } finally {
+            mdns.close()
+        }
+    }
+
+    private suspend fun discoverEndpoint(
+        context: Context,
+        timeoutMs: Long,
+        select: (MdnsDiscoveryState) -> List<MdnsEndpoint>
+    ): DiscoveredEndpoint? = withContext(Dispatchers.IO) {
+        val mdns = KadbMdnsAndroid(context.applicationContext)
+        try {
+            mdns.start()
+            val state = withTimeoutOrNull(timeoutMs) {
+                mdns.state.first { select(it).isNotEmpty() }
+            }
+            val endpoint = state?.let(select)?.firstOrNull()
+            endpoint?.let { DiscoveredEndpoint(it.host, it.port, it.name) }
+        } finally {
+            mdns.close()
+        }
+    }
 
     suspend fun pair(host: String, pairingPort: Int, sixDigitCode: String) {
         validateHost(host)
