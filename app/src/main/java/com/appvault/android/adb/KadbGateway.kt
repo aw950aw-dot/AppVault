@@ -39,7 +39,7 @@ class KadbGateway {
                 mdns.state.first { it.connectDevices.isNotEmpty() }
             }
             val endpoints = state?.connectDevices.orEmpty()
-            val endpoint = endpoints.firstOrNull { it.host == preferredHost } ?: endpoints.firstOrNull()
+            val endpoint = if (preferredHost.isNullOrBlank()) endpoints.firstOrNull() else endpoints.firstOrNull { it.host == preferredHost }
             endpoint?.let { DiscoveredEndpoint(it.host, it.port, it.name) }
         } finally {
             mdns.close()
